@@ -1,0 +1,44 @@
+[
+  {
+    "id": "C001",
+    "name": "L&T Infrastructure",
+    "points": 1500,
+    "totalWorks": 45,
+    "qualityRating": 4.8
+  },
+  {
+    "id": "C002",
+    "name": "Shapoorji Pallonji",
+    "points": 1250,
+    "totalWorks": 38,
+    "qualityRating": 4.6
+  },
+  {
+    "id": "C003",
+    "name": "Gammon India",
+    "points": 980,
+    "totalWorks": 30,
+    "qualityRating": 4.2
+  },
+  {
+    "id": "C004",
+    "name": "HCC Ltd",
+    "points": 1100,
+    "totalWorks": 32,
+    "qualityRating": 4.5
+  },
+  {
+    "id": "C005",
+    "name": "NCC Ltd",
+    "points": 850,
+    "totalWorks": 28,
+    "qualityRating": 4.1
+  },
+  {
+    "id": "C006",
+    "name": "Afcons Infrastructure",
+    "points": 1350,
+    "totalWorks": 40,
+    "qualityRating": 4.7
+  }
+]

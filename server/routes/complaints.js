@@ -12,6 +12,7 @@ const router = express.Router();
 
 const dataFile = join(__dirname, '..', 'data', 'complaints.json');
 const roadsFile = join(__dirname, '..', 'data', 'roads.json');
+const contractorsFile = join(__dirname, '..', 'data', 'contractors.json');
 
 // Multer config
 const storage = multer.diskStorage({
@@ -64,6 +65,9 @@ router.post('/', upload.single('photo'), (req, res) => {
             votes: 0,
             votedIps: [],
             department: null,
+            assignedContractorId: null,
+            assignedAt: null,
+            evaluatingDepartment: null,
             statusHistory: [
                 { status: 'pending', timestamp: new Date().toISOString(), note: 'Complaint registered successfully' }
             ],
@@ -175,9 +179,19 @@ router.put('/:id/status', (req, res) => {
     const idx = complaints.findIndex(c => c.id === req.params.id);
     if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' });
 
-    const { status, note, department } = req.body;
+    const { status, note, department, contractorId, evaluatingDepartment } = req.body;
     complaints[idx].status = status;
     if (department) complaints[idx].department = department;
+
+    // Assignment logic
+    if (contractorId) {
+        complaints[idx].assignedContractorId = contractorId;
+        complaints[idx].assignedAt = new Date().toISOString();
+    }
+    if (evaluatingDepartment) {
+        complaints[idx].evaluatingDepartment = evaluatingDepartment;
+    }
+
     complaints[idx].statusHistory.push({
         status,
         timestamp: new Date().toISOString(),
@@ -186,6 +200,40 @@ router.put('/:id/status', (req, res) => {
     complaints[idx].updatedAt = new Date().toISOString();
     writeComplaints(complaints);
     res.json({ success: true, complaint: complaints[idx] });
+});
+
+// EVALUATE contractor (admin)
+router.post('/:id/evaluate', (req, res) => {
+    const complaints = readComplaints();
+    const idx = complaints.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, error: 'Complaint Not found' });
+
+    const complaint = complaints[idx];
+    if (!complaint.assignedContractorId) return res.status(400).json({ success: false, error: 'No contractor assigned' });
+
+    const { points, feedback } = req.body;
+
+    // Update Contractor
+    let contractors = [];
+    try {
+        contractors = JSON.parse(fs.readFileSync(contractorsFile, 'utf8'));
+    } catch { contractors = []; }
+
+    const cIdx = contractors.findIndex(c => c.id === complaint.assignedContractorId);
+    if (cIdx !== -1) {
+        contractors[cIdx].points += (points || 0);
+        contractors[cIdx].totalWorks += 1;
+        fs.writeFileSync(contractorsFile, JSON.stringify(contractors, null, 2));
+    }
+
+    // Mark evaluated on complaint
+    complaint.statusHistory.push({
+        status: 'evaluated',
+        timestamp: new Date().toISOString(),
+        note: `Contractor Evaluated. Feedback: ${feedback || 'None'} (${points > 0 ? '+' + points : points} pts)`
+    });
+    writeComplaints(complaints);
+    res.json({ success: true, complaint });
 });
 
 // REOPEN complaint

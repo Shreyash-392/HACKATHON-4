@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { Camera, MapPin, Navigation, Send, Copy, CheckCircle, Loader2, Shield, AlertTriangle, Building2, Clock, MessageSquare, Lightbulb, X } from 'lucide-react'
+import { Camera, MapPin, Navigation, Send, Copy, CheckCircle, Loader2, Shield, AlertTriangle, Building2, Clock, MessageSquare, Lightbulb, X, Mic } from 'lucide-react'
 import './ReportIssue.css'
 
 // Fix leaflet default icon
@@ -114,6 +114,7 @@ export default function ReportIssue() {
     const [photo, setPhoto] = useState(null)
     const [photoPreview, setPhotoPreview] = useState(null)
     const [submitting, setSubmitting] = useState(false)
+    const [isListening, setIsListening] = useState(false)
     const [result, setResult] = useState(null)
     const [aiAnalysis, setAiAnalysis] = useState(null)
     const [loadingAI, setLoadingAI] = useState(false)
@@ -149,6 +150,31 @@ export default function ReportIssue() {
             setGeocoding(false)
         }, 800) // debounce 800ms
     }, [])
+
+    const handleListen = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+        if (!SpeechRecognition) {
+            alert("Your browser doesn't support speech to text.")
+            return
+        }
+
+        const recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = false
+
+        recognition.onstart = () => setIsListening(true)
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript
+            setForm(f => ({ ...f, description: f.description ? f.description + ' ' + transcript : transcript }))
+        }
+        recognition.onerror = (e) => {
+            console.error(e)
+            setIsListening(false)
+        }
+        recognition.onend = () => setIsListening(false)
+
+        recognition.start()
+    }
 
     const updateField = (field, value) => {
         setForm(f => {
@@ -238,6 +264,16 @@ export default function ReportIssue() {
                 setResult(data)
                 setSubmitting(false)
 
+                // Add points to wallet
+                try {
+                    await fetch('/api/user/wallet/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ points: 50 })
+                    })
+                    window.dispatchEvent(new Event('walletUpdated'))
+                } catch (e) { console.error('Wallet error', e) }
+
                 // Run AI analysis
                 setLoadingAI(true)
                 try {
@@ -293,6 +329,10 @@ export default function ReportIssue() {
                                     {copiedIdx === -2 ? <CheckCircle size={14} /> : <Copy size={14} />}
                                     {copiedIdx === -2 ? 'Copied!' : 'Copy'}
                                 </button>
+                            </div>
+                            <div className="wallet-reward-banner mt-3" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#ca8a04', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+                                <span>🎉</span>
+                                <span>You earned 50 Reward Points for reporting this issue!</span>
                             </div>
                             <p className="tracking-note">Save this ID to track your complaint status anytime.</p>
                             <div className="anonymity-banner mt-3">
@@ -415,7 +455,12 @@ export default function ReportIssue() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Description *</label>
-                                    <textarea className="form-textarea" placeholder="Describe the issue in detail..." value={form.description} onChange={e => updateField('description', e.target.value)} required />
+                                    <div className="textarea-wrapper">
+                                        <textarea className="form-textarea" placeholder="Describe the issue in detail..." value={form.description} onChange={e => updateField('description', e.target.value)} required />
+                                        <button type="button" className={`mic-btn ${isListening ? 'listening' : ''}`} onClick={handleListen} title="Voice dictate">
+                                            <Mic size={18} />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="form-row">
                                     <div className="form-group">

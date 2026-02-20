@@ -19,21 +19,25 @@ export default function AdminDashboard() {
     const [complaints, setComplaints] = useState([])
     const [filters, setFilters] = useState({ category: 'all', status: 'all', priority: 'all', search: '' })
     const [selectedComplaint, setSelectedComplaint] = useState(null)
-    const [statusUpdate, setStatusUpdate] = useState({ status: '', note: '', department: '' })
+    const [statusUpdate, setStatusUpdate] = useState({ status: '', note: '', department: '', contractorId: '', evaluatingDepartment: '' })
+    const [contractors, setContractors] = useState([])
+    const [evaluatePoints, setEvaluatePoints] = useState(50)
+    const [evaluateFeedback, setEvaluateFeedback] = useState('')
     const [loading, setLoading] = useState(true)
 
     const fetchData = async () => {
+        setLoading(true);
         try {
-            const [statsRes, complaintsRes] = await Promise.all([
-                fetch('/api/complaints/analytics/stats').then(r => r.json()),
-                fetch('/api/complaints').then(r => r.json())
-            ])
-            if (statsRes.success) setStats(statsRes.stats)
-            if (complaintsRes.success) setComplaints(complaintsRes.complaints)
-        } catch { }
+            const statsRes = await fetch('/api/complaints/analytics/stats').then(r => r.json()).catch(() => ({ success: false, stats: null }));
+            const complaintsRes = await fetch('/api/complaints').then(r => r.json()).catch(() => ({ success: false, complaints: [] }));
+            const contractorsRes = await fetch('/api/contractors').then(r => r.json()).catch(() => ({ success: false, contractors: [] }));
+
+            if (statsRes && statsRes.success) setStats(statsRes.stats);
+            if (complaintsRes && complaintsRes.success) setComplaints(complaintsRes.complaints || []);
+            if (contractorsRes && contractorsRes.success) setContractors(contractorsRes.contractors || []);
+        } catch (e) { console.error("Admin fetch error", e) }
         setLoading(false)
     }
-
     useEffect(() => { fetchData() }, [])
 
     const filteredComplaints = complaints.filter(c => {
@@ -59,7 +63,25 @@ export default function AdminDashboard() {
             if (data.success) {
                 setSelectedComplaint(data.complaint)
                 fetchData()
-                setStatusUpdate({ status: '', note: '', department: '' })
+                setStatusUpdate({ status: '', note: '', department: '', contractorId: '', evaluatingDepartment: '' })
+            }
+        } catch { }
+    }
+
+    const handleEvaluate = async () => {
+        if (!selectedComplaint || !selectedComplaint.assignedContractorId) return
+        try {
+            const res = await fetch(`/api/complaints/${selectedComplaint.id}/evaluate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points: Number(evaluatePoints), feedback: evaluateFeedback })
+            })
+            const data = await res.json()
+            if (data.success) {
+                fetchData()
+                setSelectedComplaint(data.complaint)
+                setEvaluatePoints(50)
+                setEvaluateFeedback('')
             }
         } catch { }
     }
@@ -152,11 +174,12 @@ export default function AdminDashboard() {
                         </select>
                     </div>
 
-                    <div className="complaints-table glass-card">
+                    <div className="complaints-table glass-card" style={{ gridTemplateColumns: '80px 1.5fr 1fr 1fr 1fr 100px 60px 100px 80px' }}>
                         <div className="table-header">
                             <span>ID</span>
                             <span>Title</span>
                             <span>Category</span>
+                            <span>Contractor</span>
                             <span>Priority</span>
                             <span>Status</span>
                             <span>Votes</span>
@@ -164,19 +187,22 @@ export default function AdminDashboard() {
                             <span>Action</span>
                         </div>
                         {filteredComplaints.length === 0 ? (
-                            <div className="table-empty">No complaints found</div>
+                            <div className="table-empty">No complaints found.</div>
                         ) : (
                             filteredComplaints.map(c => (
                                 <div key={c.id} className="table-row">
                                     <span className="table-id">{c.trackingId}</span>
                                     <span className="table-title">{c.title}</span>
                                     <span><span className="badge badge-category">{c.category}</span></span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        {c.assignedContractorId ? (contractors.find(ctr => ctr.id === c.assignedContractorId)?.name || c.assignedContractorId) : 'Unassigned'}
+                                    </span>
                                     <span><span className={`badge badge-${c.priority}`}>{c.priority}</span></span>
                                     <span><span className={`badge badge-${c.status}`}>{c.status}</span></span>
                                     <span className="table-votes">{c.votes}</span>
                                     <span className="table-date">{new Date(c.createdAt).toLocaleDateString()}</span>
                                     <span>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedComplaint(c); setStatusUpdate({ status: c.status, note: '', department: c.department || '' }) }}>
+                                        <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedComplaint(c); setStatusUpdate({ status: c.status, note: '', department: c.department || '', contractorId: '', evaluatingDepartment: '' }) }}>
                                             <Eye size={14} /> View
                                         </button>
                                     </span>
@@ -213,18 +239,50 @@ export default function AdminDashboard() {
                                 <h3>Update Status</h3>
                                 <div className="status-update-form">
                                     <select className="form-select" value={statusUpdate.status} onChange={e => setStatusUpdate(s => ({ ...s, status: e.target.value }))}>
+                                        <option value={selectedComplaint.status} disabled>Current: {selectedComplaint.status}</option>
                                         <option value="pending">Pending</option>
                                         <option value="in-progress">In Progress</option>
                                         <option value="resolved">Resolved</option>
                                     </select>
                                     <select className="form-select" value={statusUpdate.department} onChange={e => setStatusUpdate(s => ({ ...s, department: e.target.value }))}>
-                                        <option value="">Assign Department</option>
+                                        <option value="">Assign / Route Dept</option>
                                         {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                                     </select>
-                                    <input className="form-input" placeholder="Add a note..." value={statusUpdate.note} onChange={e => setStatusUpdate(s => ({ ...s, note: e.target.value }))} />
-                                    <button className="btn btn-primary" onClick={handleStatusUpdate}>Update Status</button>
+
+                                    {statusUpdate.status === 'in-progress' && (
+                                        <div className="allotment-fields" style={{ display: 'grid', gap: '10px', background: 'var(--bg-glass)', padding: '12px', borderRadius: '8px', gridColumn: '1 / -1', border: '1px solid var(--border-glass)' }}>
+                                            <h4 style={{ fontSize: '0.9rem', marginBottom: '4px' }}>Contractor Assignment</h4>
+                                            <select className="form-select" value={statusUpdate.evaluatingDepartment} onChange={e => setStatusUpdate(s => ({ ...s, evaluatingDepartment: e.target.value }))}>
+                                                <option value="">Evaluating Department</option>
+                                                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                            </select>
+                                            <select className="form-select" value={statusUpdate.contractorId} onChange={e => setStatusUpdate(s => ({ ...s, contractorId: e.target.value }))}>
+                                                <option value="">Assign Contractor</option>
+                                                {contractors.map(c => <option key={c.id} value={c.id}>{c.name} (Pts: {c.points})</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <input className="form-input" style={{ gridColumn: '1 / -1' }} placeholder="Add a note..." value={statusUpdate.note} onChange={e => setStatusUpdate(s => ({ ...s, note: e.target.value }))} />
+                                    <button className="btn btn-primary" style={{ gridColumn: '1 / -1' }} onClick={handleStatusUpdate}>Update Status & Allotment</button>
                                 </div>
                             </div>
+
+                            {/* Evaluate Contractor */}
+                            {selectedComplaint.status === 'resolved' && selectedComplaint.assignedContractorId && (
+                                <div className="evaluate-section" style={{ marginTop: '20px', background: 'rgba(234, 179, 8, 0.1)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                                    <h3 style={{ color: '#ca8a04', marginBottom: '12px' }}>Evaluate Contractor: {contractors.find(c => c.id === selectedComplaint.assignedContractorId)?.name}</h3>
+                                    <div style={{ display: 'grid', gap: '12px' }}>
+                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                            <label style={{ fontWeight: 600 }}>Reward Points:</label>
+                                            <input type="number" className="form-input" style={{ width: '100px' }} value={evaluatePoints} onChange={e => setEvaluatePoints(e.target.value)} />
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>(Negative for penalties)</span>
+                                        </div>
+                                        <input className="form-input" placeholder="Feedback / Quality Remarks..." value={evaluateFeedback} onChange={e => setEvaluateFeedback(e.target.value)} />
+                                        <button className="btn btn-secondary" style={{ background: '#EAB308', color: 'white', border: 'none' }} onClick={handleEvaluate}>Submit Evaluation</button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* AI Summary */}
                             {selectedComplaint.aiAnalysis && (

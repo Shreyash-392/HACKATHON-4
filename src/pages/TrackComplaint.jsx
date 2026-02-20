@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Search, MapPin, Clock, CheckCircle, AlertTriangle, RefreshCw, Copy, Shield, Loader2, RotateCcw } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, MapPin, Clock, CheckCircle, AlertTriangle, RefreshCw, Copy, Shield, Loader2, RotateCcw, Wrench } from 'lucide-react'
 import './TrackComplaint.css'
 
 const STATUS_CONFIG = {
@@ -17,6 +17,20 @@ export default function TrackComplaint() {
     const [reopenReason, setReopenReason] = useState('')
     const [showReopen, setShowReopen] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [contractorsMap, setContractorsMap] = useState({})
+
+    useEffect(() => {
+        fetch('/api/contractors')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const cmap = {}
+                    data.contractors.forEach(c => cmap[c.id] = c.name)
+                    setContractorsMap(cmap)
+                }
+            })
+            .catch(() => { })
+    }, [])
 
     const handleTrack = async (e) => {
         e.preventDefault()
@@ -128,6 +142,39 @@ export default function TrackComplaint() {
                                         <span>Assigned to: <strong>{complaint.department}</strong></span>
                                     </div>
                                 )}
+
+                                {complaint.assignedContractorId && (
+                                    <div className="allotment-info" style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)' }}>
+                                        <h4 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}><Wrench size={16} color="var(--accent-success)" /> Repair Allotment Details</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                            <div><strong style={{ color: 'var(--text-primary)' }}>Evaluating Dept:</strong><br />{complaint.evaluatingDepartment || complaint.department || 'Not Specified'}</div>
+                                            <div><strong style={{ color: 'var(--text-primary)' }}>Assigned Contractor:</strong><br />{contractorsMap[complaint.assignedContractorId] || complaint.assignedContractorId}</div>
+                                            <div style={{ gridColumn: '1 / -1' }}>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Time since assignment:</strong><br />
+                                                {(() => {
+                                                    if (!complaint.assignedAt) return 'N/A';
+                                                    if (complaint.status === 'resolved') {
+                                                        // Calculate time taken to resolve. Get last evaluated/resolved timestamp.
+                                                        const resolvedEntry = complaint.statusHistory.slice().reverse().find(e => e.status === 'resolved' || e.status === 'evaluated')
+                                                        const endMs = resolvedEntry ? new Date(resolvedEntry.timestamp).getTime() : Date.now();
+                                                        const diffMs = endMs - new Date(complaint.assignedAt).getTime();
+                                                        const diffHrs = Math.floor(diffMs / 3600000);
+                                                        const diffDays = Math.floor(diffHrs / 24);
+                                                        return `Resolved in ${diffDays > 0 ? diffDays + ' days, ' + (diffHrs % 24) + ' hrs' : diffHrs + ' hrs'}`;
+                                                    }
+                                                    const diffMs = Date.now() - new Date(complaint.assignedAt).getTime();
+                                                    const diffHrs = Math.floor(diffMs / 3600000);
+                                                    const diffDays = Math.floor(diffHrs / 24);
+                                                    if (diffDays > 0) return `${diffDays} days, ${diffHrs % 24} hours`;
+                                                    if (diffHrs > 0) return `${diffHrs} hours`;
+                                                    const diffMins = Math.floor(diffMs / 60000);
+                                                    return `${diffMins} minutes`;
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="anonymity-banner mt-2">
                                     <Shield size={14} />
                                     <span>Your identity remains anonymous</span>

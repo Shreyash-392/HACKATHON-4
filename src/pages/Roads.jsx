@@ -5,7 +5,13 @@ import './Roads.css'
 export default function Roads() {
     const [roads, setRoads] = useState([])
     const [activeTab, setActiveTab] = useState('all')
+    const [selectedState, setSelectedState] = useState('All States')
     const [loading, setLoading] = useState(true)
+
+    // Extract unique states from the loaded data to populate the dropdown
+    const availableStates = ['All States', ...new Set(roads.filter(r => r.state).map(r => r.state))]
+
+    const displayedRoads = roads.filter(r => selectedState === 'All States' || r.state === selectedState)
 
     useEffect(() => {
         const params = activeTab !== 'all' ? `?status=${activeTab}` : ''
@@ -37,19 +43,34 @@ export default function Roads() {
                     <p className="page-subtitle">Track sanctioned, ongoing, and completed road construction projects</p>
                 </div>
 
-                {/* Tabs */}
-                <div className="tabs-bar animate-fade-in-up">
-                    {tabs.map(t => (
-                        <button key={t.key} className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
-                            onClick={() => setActiveTab(t.key)}>
-                            {t.label}
-                        </button>
-                    ))}
+                {/* Filters */}
+                <div className="filters-bar animate-fade-in-up">
+                    <div className="tabs-bar">
+                        {tabs.map(t => (
+                            <button key={t.key} className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
+                                onClick={() => setActiveTab(t.key)}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="state-filter">
+                        <MapPin size={16} className="state-filter-icon" />
+                        <select
+                            className="form-select state-select"
+                            value={selectedState}
+                            onChange={e => setSelectedState(e.target.value)}
+                        >
+                            {availableStates.map(st => (
+                                <option key={st} value={st}>{st}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 {/* Road Cards */}
                 <div className="roads-grid">
-                    {roads.map((road, i) => {
+                    {displayedRoads.map((road, i) => {
                         const config = statusConfig[road.status] || statusConfig.ongoing
                         const Icon = config.icon
                         return (
@@ -100,7 +121,7 @@ export default function Roads() {
                     })}
                 </div>
 
-                {roads.length === 0 && !loading && (
+                {displayedRoads.length === 0 && !loading && (
                     <div className="empty-state glass-card">
                         <HardHat size={40} />
                         <h3>No projects found</h3>

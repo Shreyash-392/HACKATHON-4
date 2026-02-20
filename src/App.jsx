@@ -7,6 +7,8 @@ import Community from './pages/Community'
 import MapView from './pages/MapView'
 import Roads from './pages/Roads'
 import AdminDashboard from './pages/AdminDashboard'
+import CivicTrust from './pages/CivicTrust'
+import SmartRoute from './pages/SmartRoute'
 
 function App() {
     return (
@@ -19,6 +21,8 @@ function App() {
                 <Route path="/community" element={<Community />} />
                 <Route path="/map" element={<MapView />} />
                 <Route path="/roads" element={<Roads />} />
+                <Route path="/trust" element={<CivicTrust />} />
+                <Route path="/route" element={<SmartRoute />} />
                 <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
         </div>

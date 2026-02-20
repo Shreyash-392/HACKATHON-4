@@ -30,12 +30,6 @@
     gap: 10px;
     text-decoration: none;
     color: var(--text-primary);
-    font-weight: 700;
-    font-size: 1.2rem;
-}
-
-.nav-logo svg {
-    color: var(--accent-primary);
 }
 
 .nav-links {
@@ -63,8 +57,8 @@
 }
 
 .nav-link.active {
-    color: var(--accent-primary);
-    background: rgba(37, 99, 235, 0.08);
+    color: #F97316;
+    background: rgba(77, 200, 240, 0.1);
 }
 
 .nav-toggle {

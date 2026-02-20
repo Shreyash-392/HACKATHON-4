@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Search, Users, MapPin, Shield, ArrowRight, TrendingUp, CheckCircle, Clock, AlertTriangle, Camera, Send, Wrench, ChevronDown, Star, Zap, Eye } from 'lucide-react'
+import { FileText, Search, Users, MapPin, Shield, ArrowRight, TrendingUp, CheckCircle, Clock, AlertTriangle, Camera, Send, Wrench, ChevronDown, Star, Zap, Eye, Award } from 'lucide-react'
 import './Landing.css'
+
+const base = import.meta.env.BASE_URL
 
 const FAQS = [
     { q: "Is my identity really anonymous?", a: "Yes, 100%. We do not collect your name, email, phone number, or any personal data. Your complaint is submitted without any identifying information." },
@@ -14,7 +16,7 @@ const FAQS = [
 
 const TESTIMONIALS = [
     { text: "Reported a pothole near my house. It was fixed within 5 days! The tracking feature kept me informed every step.", stars: 5, area: "Andheri, Mumbai" },
-    { text: "The streetlight on our road was broken for weeks. One report on CivicResolve and the electricity board responded in 48 hours.", stars: 5, area: "Koramangala, Bangalore" },
+    { text: "The streetlight on our road was broken for weeks. One report on Snap Send Solve and the electricity board responded in 48 hours.", stars: 5, area: "Koramangala, Bangalore" },
     { text: "Love the anonymity feature. I can report issues without any fear. The AI analysis is remarkably accurate.", stars: 4, area: "Sector 62, Noida" },
 ]
 
@@ -55,6 +57,7 @@ export default function Landing() {
     const [visible, setVisible] = useState(false)
     const [stepsVisible, setStepsVisible] = useState(false)
     const [testimonialIdx, setTestimonialIdx] = useState(0)
+    const [topContractors, setTopContractors] = useState([])
     const stepsRef = useRef(null)
 
     const totalCounter = useCountUp(stats.total)
@@ -75,6 +78,15 @@ export default function Landing() {
                         pending: s.byStatus.pending || 0,
                         inProgress: s.byStatus['in-progress'] || 0,
                     })
+                }
+            })
+            .catch(() => { })
+
+        fetch('/api/contractors')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    setTopContractors(data.contractors.slice(0, 3));
                 }
             })
             .catch(() => { })
@@ -112,28 +124,30 @@ export default function Landing() {
                             100% Anonymous & Secure
                         </div>
                         <h1 className="hero-title animate-fade-in-up stagger-1">
-                            Report Civic Issues.<br />
-                            <span className="text-gradient">Drive Real Change.</span>
+                            Something need fixing?<br />
+                            <span className="text-gradient">Report it instantly.</span>
                         </h1>
                         <p className="hero-subtitle animate-fade-in-up stagger-2">
-                            Instantly report civic problems with GPS location and photo evidence.
-                            Track progress, vote on issues, and hold authorities accountable — all completely anonymously.
+                            From getting potholes filled to encouraging better parking, report issues affecting your part of the world to local councils, utilities and more.
                         </p>
                         <div className="hero-actions animate-fade-in-up stagger-3">
                             <Link to="/report" className="btn btn-primary btn-lg pulse-btn">
                                 <FileText size={20} />
-                                Report an Issue
+                                Start Snapping
                                 <ArrowRight size={18} />
                             </Link>
                             <Link to="/track" className="btn btn-secondary btn-lg">
                                 <Search size={20} />
-                                Track Complaint
+                                Track Request
                             </Link>
                         </div>
                         <div className="anonymity-banner animate-fade-in-up stagger-4">
                             <Shield size={18} />
-                            <span>Your identity is completely anonymous. You can share freely and safely.</span>
+                            <span>Your identity is completely anonymous.</span>
                         </div>
+                    </div>
+                    <div className="hero-image-wrapper animate-fade-in-up stagger-3">
+                        <img src={`${base}images/hero_cover.png`} alt="Snap Send Solve Mascot" className="hero-cover-img" />
                     </div>
                 </div>
             </section>
@@ -178,6 +192,29 @@ export default function Landing() {
                 </div>
             </section>
 
+            {/* Top Contractors */}
+            <section className="contractors-section">
+                <div className="container">
+                    <div className="section-header text-center">
+                        <h2 className="section-title"><Award className="inline-icon" /> Top Ranked Contractors</h2>
+                        <p className="section-subtitle">Recognizing the teams delivering the fastest and highest quality civic repairs.</p>
+                    </div>
+                    <div className="contractors-grid">
+                        {topContractors.map((c, i) => (
+                            <div key={c.id} className="contractor-card glass-card animate-fade-in-up" style={{ animationDelay: `${i * 0.15}s` }}>
+                                <div className="contractor-rank">#{i + 1}</div>
+                                <h3 className="contractor-name">{c.name}</h3>
+                                <div className="contractor-stats">
+                                    <div className="c-stat"><Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {c.qualityRating}/5 Rating</div>
+                                    <div className="c-stat"><CheckCircle size={16} color="var(--accent-success)" /> {c.totalWorks} Works Completed</div>
+                                    <div className="c-stat points-badge"><Zap size={16} /> {c.points} Pts</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* Flashcards — Civic Issues */}
             <section className="flashcards-section">
                 <div className="container">
@@ -188,7 +225,7 @@ export default function Landing() {
                         <div className="flashcard">
                             <div className="flashcard-inner">
                                 <div className="flashcard-front">
-                                    <img src="/images/pothole.png" alt="Pothole on road" />
+                                    <img src={`${base}images/pothole.png`} alt="Pothole on road" />
                                     <div className="flashcard-overlay">
                                         <span className="flashcard-category">Roads</span>
                                         <h4>Potholes & Road Damage</h4>
@@ -205,7 +242,7 @@ export default function Landing() {
                         <div className="flashcard">
                             <div className="flashcard-inner">
                                 <div className="flashcard-front">
-                                    <img src="/images/water_pipe.png" alt="Broken water pipe" />
+                                    <img src={`${base}images/water_pipe.png`} alt="Broken water pipe" />
                                     <div className="flashcard-overlay">
                                         <span className="flashcard-category">Water</span>
                                         <h4>Broken Water Pipes</h4>
@@ -222,7 +259,7 @@ export default function Landing() {
                         <div className="flashcard">
                             <div className="flashcard-inner">
                                 <div className="flashcard-front">
-                                    <img src="/images/garbage.png" alt="Garbage dump" />
+                                    <img src={`${base}images/garbage.png`} alt="Garbage dump" />
                                     <div className="flashcard-overlay">
                                         <span className="flashcard-category">Sanitation</span>
                                         <h4>Overflowing Garbage</h4>
@@ -239,7 +276,7 @@ export default function Landing() {
                         <div className="flashcard">
                             <div className="flashcard-inner">
                                 <div className="flashcard-front">
-                                    <img src="/images/streetlight.png" alt="Broken streetlight" />
+                                    <img src={`${base}images/streetlight.png`} alt="Broken streetlight" />
                                     <div className="flashcard-overlay">
                                         <span className="flashcard-category">Streetlights</span>
                                         <h4>Dark & Unsafe Streets</h4>
@@ -265,7 +302,7 @@ export default function Landing() {
                     <div className={`hiw-cards ${stepsVisible ? 'visible' : ''}`}>
                         <div className="hiw-card hiw-1">
                             <div className="hiw-card-image">
-                                <img src="/images/snap_it.png" alt="Snap a photo" />
+                                <img src={`${base}images/snap_it.png`} alt="Snap a photo" />
                             </div>
                             <div className="hiw-card-content">
                                 <div className="hiw-step-number">01</div>
@@ -280,7 +317,7 @@ export default function Landing() {
 
                         <div className="hiw-card hiw-2">
                             <div className="hiw-card-image">
-                                <img src="/images/send_it.png" alt="Pin and send" />
+                                <img src={`${base}images/send_it.png`} alt="Pin and send" />
                             </div>
                             <div className="hiw-card-content">
                                 <div className="hiw-step-number">02</div>
@@ -295,7 +332,7 @@ export default function Landing() {
 
                         <div className="hiw-card hiw-3">
                             <div className="hiw-card-image">
-                                <img src="/images/solve_it.png" alt="Track resolution" />
+                                <img src={`${base}images/solve_it.png`} alt="Track resolution" />
                             </div>
                             <div className="hiw-card-content">
                                 <div className="hiw-step-number">03</div>
@@ -371,7 +408,7 @@ export default function Landing() {
             <section className="faq-section">
                 <div className="container">
                     <h2 className="section-title">Frequently Asked Questions</h2>
-                    <p className="section-subtitle">Everything you need to know about CivicResolve</p>
+                    <p className="section-subtitle">Everything you need to know about Snap Send Solve</p>
 
                     <div className="faq-list">
                         {FAQS.map((faq, i) => (
@@ -395,8 +432,11 @@ export default function Landing() {
                 <div className="container">
                     <div className="footer-content">
                         <div className="footer-brand">
-                            <Shield size={20} />
-                            <span>CivicResolve</span>
+                            <div className="stacked-logo">
+                                <span>Snap</span>
+                                <span>Send</span>
+                                <span>Solve</span>
+                            </div>
                         </div>
                         <p>Making communities better, one report at a time.</p>
                     </div>

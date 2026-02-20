@@ -2,15 +2,51 @@
     margin-bottom: 32px;
 }
 
-/* Tabs */
-.roads-tabs {
+/* Filters */
+.filters-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.tabs-bar {
     display: flex;
     gap: 4px;
-    background: #f1f5f9;
-    padding: 4px;
+}
+
+.state-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 6px 12px;
     border-radius: var(--radius-md);
-    margin-bottom: 32px;
-    width: fit-content;
+    border: 1px solid var(--border-glass);
+}
+
+.state-filter-icon {
+    color: var(--accent-primary);
+}
+
+.state-select {
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    padding: 4px 8px;
+}
+
+.state-select:focus {
+    box-shadow: none;
 }
 
 .tab-btn {
