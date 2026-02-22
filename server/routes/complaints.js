@@ -265,4 +265,40 @@ router.put('/:id/analysis', (req, res) => {
     res.json({ success: true, complaint: complaints[idx] });
 });
 
+// DELETE complaint by id
+router.delete('/:id', (req, res) => {
+    const complaints = readComplaints();
+    const idx = complaints.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' });
+
+    const [removed] = complaints.splice(idx, 1);
+    writeComplaints(complaints);
+
+    // remove associated photo file if it exists and is local
+    if (removed.photo && removed.photo.startsWith('/uploads/')) {
+        const photoPath = join(__dirname, '..', removed.photo);
+        fs.unlink(photoPath, err => { /* ignore error */ });
+    }
+
+    res.json({ success: true });
+});
+
+// (dev helper) remove the most recently created complaint
+router.delete('/latest', (req, res) => {
+    let complaints = readComplaints();
+    if (complaints.length === 0) return res.json({ success: false, error: 'No complaints' });
+
+    // find by createdAt newest
+    complaints.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const removed = complaints.shift();
+    writeComplaints(complaints);
+
+    if (removed.photo && removed.photo.startsWith('/uploads/')) {
+        const photoPath = join(__dirname, '..', removed.photo);
+        fs.unlink(photoPath, () => {});
+    }
+
+    res.json({ success: true, removed });
+});
+
 export default router;
