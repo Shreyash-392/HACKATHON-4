@@ -25,6 +25,20 @@ export default function AdminDashboard() {
     const [evaluatePoints, setEvaluatePoints] = useState(50)
     const [evaluateFeedback, setEvaluateFeedback] = useState('')
     const [loading, setLoading] = useState(true)
+    
+    const handleDeleteComplaint = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this complaint?')) return;
+        try {
+            const res = await apiFetch(`/api/complaints/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                fetchData();
+                if (selectedComplaint && selectedComplaint.id === id) setSelectedComplaint(null);
+            }
+        } catch (err) {
+            console.error('Delete error', err);
+        }
+    }
 
     const fetchData = async () => {
         setLoading(true);
@@ -202,9 +216,12 @@ export default function AdminDashboard() {
                                     <span><span className={`badge badge-${c.status}`}>{c.status}</span></span>
                                     <span className="table-votes">{c.votes}</span>
                                     <span className="table-date">{new Date(c.createdAt).toLocaleDateString()}</span>
-                                    <span>
+                                    <span style={{ display: 'flex', gap: '4px' }}>
                                         <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedComplaint(c); setStatusUpdate({ status: c.status, note: '', department: c.department || '', contractorId: '', evaluatingDepartment: '' }) }}>
                                             <Eye size={14} /> View
+                                        </button>
+                                        <button className="btn btn-danger btn-sm" onClick={() => handleDeleteComplaint(c.id)}>
+                                            <X size={14} />
                                         </button>
                                     </span>
                                 </div>
@@ -218,6 +235,9 @@ export default function AdminDashboard() {
                     <div className="modal-overlay" onClick={() => setSelectedComplaint(null)}>
                         <div className="modal-content glass-card animate-fade-in-up" onClick={e => e.stopPropagation()}>
                             <button className="modal-close" onClick={() => setSelectedComplaint(null)}><X size={20} /></button>
+                            <button className="btn btn-danger" style={{ position: 'absolute', top: '16px', right: '48px' }} onClick={() => handleDeleteComplaint(selectedComplaint.id)}>
+                                Delete Complaint
+                            </button>
                             <h2>{selectedComplaint.title}</h2>
                             <div className="modal-meta">
                                 <span className={`badge badge-${selectedComplaint.priority}`}>{selectedComplaint.priority}</span>
